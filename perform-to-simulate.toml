@@ -1,0 +1,114 @@
+[perform-module-update]
+
+match="module Perform exposing (perform)"
+rewrite="module Generated.Simulate exposing (simulate)"
+
+[perform-decl-update]
+
+match = '''
+perform : { a | navigationKey : :[type] } -> Effect -> Cmd Msg
+perform model effect ='''
+rewrite = '''
+simulate : Effect -> SimulatedEffect Msg
+simulate effect ='''
+
+[perform-recursive-call]
+
+match = "(perform model)"
+rewrite = "simulate"
+
+[perform-imports]
+
+match = "import Browser.Navigation"
+rewrite = '''import SimulatedEffect.Navigation
+import ProgramTest exposing (SimulatedEffect)
+import SimulatedEffect.Cmd'''
+
+[http-import ]
+
+match = "import Http"
+rewrite = "import SimulatedEffect.Http as Http"
+
+
+[task-import ]
+
+match = '''import Task
+import Time
+import TimeZone
+'''
+rewrite = '''
+import Json.Encode
+import SimulatedEffect.Ports
+'''
+
+[ports-import]
+
+match = "import Ports"
+rewrite = "import Generated.Ports"
+
+[ports-refs]
+match = " Ports.:[value]"
+rewrite = " Generated.Ports.:[value]"
+
+[cmd-refs]
+
+match = "Cmd.:[value]"
+rewrite = "SimulatedEffect.Cmd.:[value]"
+
+[remove-model-refs]
+
+match = "model.:[field] "
+rewrite = ""
+
+[perform-browser-nav]
+
+match = "Browser.Navigation.:[name]"
+rewrite = "SimulatedEffect.Navigation.:[name]"
+
+[ports-module-update]
+
+match = "port module Ports exposing (:[values])"
+rewrite = '''module Generated.Ports exposing
+    (:[values])
+
+import ProgramTest exposing (SimulatedEffect)
+import SimulatedEffect.Ports
+import Json.Decode
+'''
+
+[ports-subs]
+
+match = "port :[name] : (Json.Encode.Value -> msg) -> Sub msg"
+rewrite = ''':[name] : (Json.Decode.Value -> msg) -> ProgramTest.SimulatedSub msg
+:[name] toMsg =
+    SimulatedEffect.Ports.subscribe ":[name]" Json.Decode.value toMsg'''
+
+[ports-cmds]
+
+match = "port :[name] : :[arg] -> :[type] msg"
+rewrite = ''':[name] : Json.Encode.Value -> SimulatedEffect msg
+:[name] v =
+    SimulatedEffect.Ports.send ":[name]" v'''
+rule='where :[type] != "Sub"'
+
+
+[ports-aux]
+
+match = "-> Cmd msg"
+rewrite = "-> SimulatedEffect msg"
+
+
+[get-timezone]
+
+match = "Task.attempt Msg.GetTimeZone TimeZone.getZone"
+rewrite = "SimulatedEffect.Ports.send \"get-time-zone\" Json.Encode.null"
+
+[get-legacy-timezone]
+
+match = "Task.perform Msg.LegacyGetTimeZone Time.here"
+rewrite = "SimulatedEffect.Ports.send \"get-legacy-time-zone\" Json.Encode.null"
+
+ 
+
+
+

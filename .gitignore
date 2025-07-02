@@ -1,0 +1,21 @@
+# Devenv
+.devenv*
+devenv.local.nix
+
+# direnv
+.direnv
+
+# pre-commit
+.pre-commit-config.yaml
+
+
+__pycache__
+debug.db
+production.db
+
+elm-stuff
+review/elm-stuff
+tests/Generated
+
+static/main-debug.js
+static/main.js
