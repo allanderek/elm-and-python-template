@@ -4,17 +4,18 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-- **Backend**: Python 3 with Bottle framework, SQLite database, JWT authentication
+- **Backend**: Python 3 with FastAPI framework, SQLite database, JWT authentication
 - **Frontend**: Elm 0.19.1 single-page application
 - **Testing**: elm-test for frontend, with generated test modules using comby transformations
 
 ## Architecture
 
 ### Backend (Python)
-- `app.py`: Main Flask/Bottle application with JWT authentication using argon2 password hashing
+- `app.py`: Main FastAPI application with JWT authentication using argon2 password hashing
 - Configuration loaded from JSON files (`config.dev.json`, `config.prod.json`)
 - SQLite database with user authentication system
 - SQL migrations in `sql/migrations/`
+- Uses Pydantic models for request/response validation
 
 ### Frontend (Elm)
 - **Main.elm**: Application entry point using Browser.application pattern
@@ -36,7 +37,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 #### Backend Testing
 - `tests/` directory contains Python tests using pytest
-- `tests/conftest.py` provides test fixtures and configuration
+- `tests/conftest.py` provides test fixtures and configuration using FastAPI TestClient
 - `tests/test_auth.py` contains authentication endpoint tests
 - Tests use temporary SQLite databases that are created and destroyed for each test
 - `config.test.json` provides test-specific configuration
@@ -58,6 +59,9 @@ pip install -r requirements.txt
 
 # Run development server
 python app.py config.dev.json
+
+# Alternative: Run with uvicorn directly
+uvicorn app:app --host localhost --port 3003 --reload
 
 # Watch backend files for changes
 make watch-backend

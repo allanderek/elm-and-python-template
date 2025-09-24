@@ -34,13 +34,12 @@ class TestAuthentication:
             "username": "testuser",
             "email": "test@example.com"
         }
-        
+
         response = client.post('/api/register', json=user_data)
-        
-        assert response.status_code == 400
+
+        assert response.status_code == 422  # FastAPI returns 422 for validation errors
         response_data = response.json()
-        assert response_data['success'] is False
-        assert 'required' in response_data['message'].lower()
+        assert 'detail' in response_data  # FastAPI uses 'detail' for error messages
     
     def test_register_duplicate_username(self, client):
         """Test registration with existing username"""
@@ -67,8 +66,8 @@ class TestAuthentication:
         
         assert response2.status_code == 409
         response_data = response2.json()
-        assert response_data['success'] is False
-        assert 'already exists' in response_data['message'].lower()
+        assert 'detail' in response_data
+        assert 'already exists' in response_data['detail'].lower()
     
     def test_login_success(self, client):
         """Test successful login"""
@@ -122,8 +121,8 @@ class TestAuthentication:
         
         assert response.status_code == 401
         response_data = response.json()
-        assert response_data['success'] is False
-        assert 'invalid credentials' in response_data['message'].lower()
+        assert 'detail' in response_data
+        assert 'invalid credentials' in response_data['detail'].lower()
     
     def test_login_nonexistent_user(self, client):
         """Test login with non-existent username"""
@@ -136,8 +135,8 @@ class TestAuthentication:
         
         assert response.status_code == 401
         response_data = response.json()
-        assert response_data['success'] is False
-        assert 'invalid credentials' in response_data['message'].lower()
+        assert 'detail' in response_data
+        assert 'invalid credentials' in response_data['detail'].lower()
     
     def test_login_missing_fields(self, client):
         """Test login with missing required fields"""
@@ -145,13 +144,12 @@ class TestAuthentication:
         login_data = {
             "username": "testuser"
         }
-        
+
         response = client.post('/api/login', json=login_data)
-        
-        assert response.status_code == 400
+
+        assert response.status_code == 422  # FastAPI returns 422 for validation errors
         response_data = response.json()
-        assert response_data['success'] is False
-        assert 'required' in response_data['message'].lower()
+        assert 'detail' in response_data  # FastAPI uses 'detail' for error messages
     
     def test_logout_success(self, client):
         """Test successful logout"""
@@ -190,12 +188,12 @@ class TestAuthentication:
     
     def test_protected_route_without_auth(self, client):
         """Test accessing protected route without authentication"""
-        response = client.post('/api/me')
-        
-        # Note: This test might fail with current conftest setup
-        # as it's difficult to mock bottle's authentication properly
-        # This is more of a placeholder for when we improve the test client
-        pass
+        response = client.get('/api/me')
+
+        assert response.status_code == 401
+        response_data = response.json()
+        assert 'detail' in response_data
+        assert 'authentication required' in response_data['detail'].lower()
 
 
 class TestPasswordSecurity:
