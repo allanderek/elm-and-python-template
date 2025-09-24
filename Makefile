@@ -13,6 +13,13 @@ $(ELMPRODAPP): elm.json $(shell fd . -e elm src/)
 review:
 	elm-review
 
+.PHONY: venv
+venv:
+	@echo "Setting up virtual environment..."
+	@if [ ! -d "venv" ]; then \
+		python -m venv venv; \
+	fi
+	@. venv/bin/activate && pip install -r requirements.txt
 
 GEN_TESTS_MODULES_DIR = ./tests/Generated
 SIMULATE_MODULE = $(GEN_TESTS_MODULES_DIR)/Simulate.elm
