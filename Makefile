@@ -20,6 +20,7 @@ venv:
 		python -m venv venv; \
 	fi
 	@. venv/bin/activate && pip install -r requirements.txt
+	@echo "You will now need to 'source venv/bin/activate.fish'
 
 GEN_TESTS_MODULES_DIR = ./tests/Generated
 SIMULATE_MODULE = $(GEN_TESTS_MODULES_DIR)/Simulate.elm
