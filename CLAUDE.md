@@ -116,6 +116,17 @@ python -m pytest tests/test_auth.py::TestAuthentication::test_login_success -v
 lightningcss --minify static/styles.css -o static/styles.min.css
 ```
 
+### Git Hooks Setup
+```bash
+# Install Git hooks to prevent accidental .env commits (first time)
+./setup-hooks.sh
+```
+
+The pre-commit hook prevents accidentally committing the `.env` file, which contains sensitive environment variables. If you need to bypass the hook (e.g., in template repositories), use:
+```bash
+git commit --no-verify
+```
+
 ## Key Development Patterns
 
 ### Elm Architecture

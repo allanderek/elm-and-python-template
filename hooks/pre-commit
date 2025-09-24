@@ -1,0 +1,23 @@
+#!/bin/bash
+
+# Pre-commit hook to prevent committing .env files
+# This helps protect against accidentally committing sensitive environment variables
+
+# Check if .env file is being committed
+if git diff --cached --name-only | grep -q "^\.env$"; then
+    echo "ERROR: Attempting to commit .env file"
+    echo ""
+    echo "The .env file contains sensitive information and should not be committed to the repository."
+    echo "Please remove .env from the commit:"
+    echo ""
+    echo "  git reset HEAD .env"
+    echo ""
+    echo "If you absolutely must commit this file (e.g., for template repositories), use:"
+    echo ""
+    echo "  git commit --no-verify"
+    echo ""
+    exit 1
+fi
+
+# If we get here, the commit is allowed
+exit 0
