@@ -9,3 +9,7 @@ If already created you only need the middle line:
 $ source venv/bin/activate.fish 
 
 
+# To use the template to create a new project
+
+copier copy gh:allanderek/elm-and-python-template new-project-name
+
