@@ -17,7 +17,8 @@
     pkgs.nodejs
     pkgs.elmPackages.elm-review
     pkgs.elmPackages.elm-json
-    pkgs.comby
+    # Currently broken :(
+    # pkgs.comby
     ];
 
   # https://devenv.sh/languages/
