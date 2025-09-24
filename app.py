@@ -1,5 +1,5 @@
 from fastapi import FastAPI, Request, HTTPException, Depends, Response, status
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 import argon2
@@ -20,17 +20,12 @@ import hmac
 from typing import Optional, Dict, Any
 import uvicorn
 import app_details
+import logging
+import secrets
+from requests_oauthlib import OAuth2Session
 
 # Global variables that will be set by create_app
 app = FastAPI()
-config = {
-  "prettyLogging": True,
-  "logLevel": -1,
-  "jwtSecret": "34edf35d-4b7b-4b7b-8b7b-4b7b4b7b4b7b",
-  "dbFilepath": "debug.db",
-  "port": 3003,
-  "debug": True
-  }
 password_hasher = argon2.PasswordHasher()
 
 # Make sure the static directory exists
@@ -39,6 +34,9 @@ os.makedirs('./static', exist_ok=True)
 AUTH_COOKIE_NAME = "auth_token"
 AUTH_COOKIE_MAX_DAYS = 360
 AUTH_COOKIE_MAX_AGE = AUTH_COOKIE_MAX_DAYS * 24 * 60 * 60  # 360 days in seconds
+
+GOOGLE_CLIENT_ID= os.getenv('GOOGLE_CLIENT_ID')
+GOOGLE_CLIENT_SECRET= os.getenv('GOOGLE_CLIENT_SECRET')
 
 # Pydantic models for request/response bodies
 class LoginRequest(BaseModel):
@@ -133,6 +131,27 @@ def verify_password(stored_password, provided_password):
         return True
     except argon2.exceptions.VerifyMismatchError:
         return False
+
+def set_auth_cookie(response: Response, user_id: int):
+    """Create JWT token and set authentication cookie"""
+    # Create JWT token with user_id embedded
+    payload = {
+        'user_id': user_id,
+        'exp': datetime.datetime.now(datetime.UTC) + datetime.timedelta(days=AUTH_COOKIE_MAX_DAYS),
+    }
+    token = jwt.encode(payload, config["jwtSecret"], algorithm=config["jwtAlgorithm"])
+
+    # Set HTTP-Only secure cookie
+    secure_cookie = not config.get('debug', False)  # Don't require HTTPS in debug mode
+    response.set_cookie(
+        AUTH_COOKIE_NAME,
+        token,
+        httponly=True,     # Prevents JavaScript access
+        secure=secure_cookie,  # Only sent over HTTPS (disabled in debug mode)
+        samesite='lax',    # Prevents CSRF but allows for Google OAuth login
+        max_age=AUTH_COOKIE_MAX_AGE,
+        path='/'           # Available across the entire domain
+    )
 
 def get_current_user(db, user_id):
     """Get current user from database"""
@@ -269,24 +288,8 @@ def login(login_data: LoginRequest, response: Response):
         if not user or not verify_password(user['password'], password):
             raise HTTPException(status_code=401, detail="Invalid credentials")
 
-        # Create JWT token with user_id embedded
-        payload = {
-            'user_id': user['id'],
-            'exp': datetime.datetime.now(datetime.UTC) + datetime.timedelta(days=AUTH_COOKIE_MAX_DAYS),
-        }
-        token = jwt.encode(payload, config["jwtSecret"], algorithm=config["jwtAlgorithm"])
-
-        # Set HTTP-Only secure cookie
-        secure_cookie = not config.get('debug', False)  # Don't require HTTPS in debug mode
-        response.set_cookie(
-            AUTH_COOKIE_NAME,
-            token,
-            httponly=True,     # Prevents JavaScript access
-            secure=secure_cookie,  # Only sent over HTTPS (disabled in debug mode)
-            samesite='strict', # Prevents CSRF
-            max_age=AUTH_COOKIE_MAX_AGE,
-            path='/'           # Available across the entire domain
-        )
+        # Set authentication cookie
+        set_auth_cookie(response, user['id'])
 
         return {
             'success': True,
@@ -329,24 +332,8 @@ def register(register_data: RegisterRequest, response: Response):
         cursor = db.execute(insert_query, (username, email, fullname, hashed_password, False))
         user_id = cursor.lastrowid
 
-        # Create JWT token for the new user
-        payload = {
-            'user_id': user_id,
-            'exp': datetime.datetime.now(datetime.UTC) + datetime.timedelta(days=AUTH_COOKIE_MAX_DAYS),
-        }
-        token = jwt.encode(payload, config["jwtSecret"], algorithm=config["jwtAlgorithm"])
-
-        # Set HTTP-Only secure cookie
-        secure_cookie = not config.get('debug', False)
-        response.set_cookie(
-            AUTH_COOKIE_NAME,
-            token,
-            httponly=True,
-            secure=secure_cookie,
-            samesite='strict',
-            max_age=AUTH_COOKIE_MAX_AGE,
-            path='/'
-        )
+        # Set authentication cookie
+        set_auth_cookie(response, user_id)
 
         return {
             'success': True,
@@ -364,6 +351,181 @@ def register(register_data: RegisterRequest, response: Response):
 def logout(response: Response):
     response.delete_cookie(AUTH_COOKIE_NAME, path='/')
     return {'success': True, 'message': 'Logged out successfully'}
+
+
+# OAuth configuration
+GOOGLE_AUTHORIZE_URL = 'https://accounts.google.com/o/oauth2/auth'
+GOOGLE_TOKEN_URL = 'https://oauth2.googleapis.com/token'
+GOOGLE_USERINFO_URL = 'https://www.googleapis.com/oauth2/v2/userinfo'
+
+# Store OAuth states temporarily (in production, use Redis or database)
+oauth_states = {}
+
+@app.get('/api/auth/google/login')
+def google_oauth_login():
+    """Initiate Google OAuth flow"""
+    state = secrets.token_urlsafe(32)
+
+    oauth = OAuth2Session(
+        GOOGLE_CLIENT_ID,
+        redirect_uri=f"{config['base_url']}/api/auth/google/callback",
+        scope='openid email profile'
+    )
+
+    authorization_url, _ = oauth.create_authorization_url(
+        GOOGLE_AUTHORIZE_URL,
+        state=state
+    )
+
+    # Store state temporarily (use Redis/database in production)
+    oauth_states[state] = True
+
+    # Return the URL for frontend to redirect to
+    # return {'authorization_url': authorization_url}
+    return RedirectResponse(url=authorization_url)
+
+@app.get('/api/auth/google/callback')
+def google_oauth_callback(request: Request, response: Response, code: Optional[str] = None, state: Optional[str] = None, error: Optional[str] = None):
+    """Handle Google OAuth callback"""
+
+    if error:
+        raise HTTPException(status_code=400, detail=f'OAuth error: {error}')
+
+    if not code or not state or state not in oauth_states:
+        raise HTTPException(status_code=400, detail='Invalid OAuth callback')
+
+    # Clean up state
+    del oauth_states[state]
+
+    try:
+        # Exchange code for token
+        oauth = OAuth2Session(
+            GOOGLE_CLIENT_ID,
+            redirect_uri=f"{config['base_url']}/api/auth/google/callback"
+        )
+
+        token = oauth.fetch_token(
+            GOOGLE_TOKEN_URL,
+            code=code,
+            client_secret=GOOGLE_CLIENT_SECRET
+        )
+
+        # Get user info from Google
+        resp = oauth.get(GOOGLE_USERINFO_URL)
+        user_info = resp.json()
+
+        # Process the OAuth login
+        oauth_result = process_oauth_login('google', user_info)
+
+        if oauth_result['success']:
+            user_data = oauth_result['user']
+            user_id = user_data['id']
+
+            # Set authentication cookie
+            set_auth_cookie(response, user_id)
+
+            # Redirect to home page
+            return RedirectResponse(url=f"{config['base_url']}#/")
+        else:
+            return RedirectResponse(url=f"{config['base_url']}#/login?error=oauth_failed")
+    except Exception as e:
+        logging.error(f"OAuth error: {repr(e)}")
+        raise HTTPException(status_code=500, detail='OAuth authentication failed')
+
+def process_oauth_login(provider, user_info):
+    """Process OAuth login and create/update user"""
+    with db_transaction() as db:
+        provider_user_id = user_info.get('id')
+        email = user_info.get('email')
+        display_name = user_info.get('name')
+        
+        if not provider_user_id or not email:
+            return {'success': False, 'message': 'Incomplete user information from OAuth provider'}
+        
+        # Check if OAuth account already exists
+        oauth_query = """
+            select u.id, u.username, u.email, u.fullname, u.admin 
+            from users u
+            join user_oauth_accounts uoa on u.id = uoa.user_id
+            where uoa.provider = :provider and uoa.provider_user_id = :provider_user_id
+        """
+        
+        existing_oauth_user = db.execute(oauth_query, {
+            "provider": provider,
+            "provider_user_id": provider_user_id
+        }).fetchone()
+        
+        if existing_oauth_user:
+            # User exists with this OAuth account
+            user = existing_oauth_user
+        else:
+            # Check if user exists by email
+            email_query = "select id, username, email, fullname, admin from users where email = :email"
+            existing_email_user = db.execute(email_query, {"email": email}).fetchone()
+            
+            if existing_email_user:
+                # Link OAuth account to existing user
+                user = existing_email_user
+                db.execute("""
+                    insert into user_oauth_accounts (user_id, provider, provider_user_id, email)
+                    values (:user_id, :provider, :provider_user_id, :email)
+                """, {
+                    "user_id": user['id'],
+                    "provider": provider,
+                    "provider_user_id": provider_user_id,
+                    "email": email
+                })
+            else:
+                # Create new user
+                insert_user_query = """
+                    insert into users (email, fullname, username, admin)
+                    values (:email, :fullname, :username, false)
+                    returning id, username, email, fullname, admin
+                """
+                
+                # Generate username from email if not provided
+                username = email.split('@')[0]
+                # Handle username conflicts by appending numbers
+                base_username = username
+                counter = 1
+                while True:
+                    check_username = db.execute("select id from users where username = :username", 
+                                              {"username": username}).fetchone()
+                    if not check_username:
+                        break
+                    username = f"{base_username}{counter}"
+                    counter += 1
+                
+                user = db.execute(insert_user_query, {
+                    "email": email,
+                    "fullname": display_name or email,
+                    "username": username
+                }).fetchone()
+                
+                # Create OAuth account link
+                db.execute("""
+                    insert into user_oauth_accounts (user_id, provider, provider_user_id, email)
+                    values (:user_id, :provider, :provider_user_id, :email)
+                """, {
+                    "user_id": user['id'],
+                    "provider": provider,
+                    "provider_user_id": provider_user_id,
+                    "email": email
+                })
+
+        return {
+            'success': True, 
+            'message': 'OAuth login successful',
+            'user': {
+                'id': user['id'],
+                'username': user['username'],
+                'fullname': user['fullname'],
+                'email': user['email'],
+                'admin': bool(user['admin'])
+            }
+        }
+
+
 
 @app.get('/api/me')
 def get_me(user_id: int = Depends(get_current_user_id)):
@@ -389,16 +551,15 @@ def update_profile(profile_data: ProfileUpdateRequest, user_id: int = Depends(ge
 def protected_resource(user_id: int = Depends(get_current_user_id)):
     return {'message': f'Hello, authenticated user {user_id}!'}
 
-
 def configure_app(config_dict):
     """Configure JWT and logging after config is loaded."""
     global config
     config = config_dict
-    config["jwtAlgorithm"] = "HS256"
+
+    config['jwtSecret'] = os.getenv(config['jwtSecretVar'])
     
     # Configure logging based on config
     if config.get('prettyLogging', False):
-        import logging
         logging.basicConfig(
             level=logging.DEBUG if config.get('logLevel', 0) <= 0 else logging.INFO,
             format='%(asctime)s [%(levelname)s] %(message)s',
@@ -414,7 +575,7 @@ def configure_app(config_dict):
     
     if needs_init:
         init_test_database()
-
+    
 
 def init_test_database():
     """Initialize database schema by executing SQL migration files."""

@@ -1,7 +1,7 @@
 {
   "prettyLogging": true,
   "logLevel": -1,
-  "jwtSecret": "34edf35d-4b7b-4b7b-8b7b-4b7b4b7b4b7b",
+  "jwtSecretVar": "DEV_JWT_SECRET",
   "jwtAlgorithm": "HS256",
   "dbFilepath": "debug.db",
   "port": 3003,

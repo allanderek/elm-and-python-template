@@ -14,6 +14,9 @@ __pycache__
 venv
 debug.db
 production.db
+# This file is actually tracked by git in the *template* repo, but when we create a new
+# project from this template we do not want to store it in git.
+.env
 
 elm-stuff
 review/elm-stuff
