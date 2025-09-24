@@ -1,0 +1,10 @@
+# Questions
+app_title:
+  type: str
+  help: "The title for the application, shown in the header"
+  default: "My Application"
+
+emoji_icon:
+  type: str
+  help: "An emoji to use as an icon for the application"
+  default: "🚀"

@@ -9,6 +9,3 @@ If already created you only need the middle line:
 $ source venv/bin/activate.fish 
 
 
-## TODOS:
-
-- [ ] Am I vulnerable to SQL-injection? I don't believe so because we're using SQL params and not string interpolation.
