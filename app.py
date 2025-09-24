@@ -19,6 +19,7 @@ import base64
 import hmac
 from typing import Optional, Dict, Any
 import uvicorn
+import app_details
 
 # Global variables that will be set by create_app
 app = FastAPI()
@@ -181,8 +182,8 @@ def serve_index(request: Request, path: str = None):
                 <head>
                     <meta charset="UTF-8">
                     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                    <title>{{app_title}}</title>
-                    <link rel="icon" type="image/svg" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='48' height='48' viewBox='0 0 16 16'><text x='0' y='14'>{{emoji_icon}}</text></svg>"/>
+                    <title>{app_details.title}</title>
+                    <link rel="icon" type="image/svg" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='48' height='48' viewBox='0 0 16 16'><text x='0' y='14'>{app_details.favicon_emoji}</text></svg>"/>
 
                     <link rel="preconnect" href="https://fonts.googleapis.com">
                     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -192,7 +193,7 @@ def serve_index(request: Request, path: str = None):
                     <script src="{main_js_src}"></script>
                 </head>
                 <body>
-                    <h1>{{app_title}}</h1>
+                    <h1>{app_details.title}</h1>
                     <script>
                         const safeLocalStorage = {{
                               getItem(key) {{

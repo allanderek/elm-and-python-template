@@ -1,5 +1,6 @@
 module View exposing (application)
 
+import AppDetails
 import Browser
 import Components.Page exposing (Page)
 import Helpers.Http
@@ -60,6 +61,6 @@ application model =
                     , body = [ Html.text "The page you were looking for has not been found." ]
                     }
     in
-    { title = "{{app_title}}"
+    { title = AppDetails.title
     , body = [ navigationBar, Components.Page.view body ]
     }
