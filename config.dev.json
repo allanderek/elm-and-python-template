@@ -1,4 +1,5 @@
 {
+  "base_url": "https://dev.poleprediction.com",
   "prettyLogging": true,
   "logLevel": -1,
   "jwtSecretVar": "DEV_JWT_SECRET",

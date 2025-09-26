@@ -104,9 +104,21 @@ update msg model =
         Msg.LinkClicked urlRequest ->
             case urlRequest of
                 Browser.Internal url ->
-                    ( model
-                    , Effect.PushUrl (Url.toString url)
-                    )
+                    let
+                        urlString : String
+                        urlString =
+                            Url.toString url
+                    in
+                    case url.path == Route.googleOAuthPath of
+                        True ->
+                            ( model
+                            , Effect.LoadUrl urlString
+                            )
+
+                        False ->
+                            ( model
+                            , Effect.PushUrl urlString
+                            )
 
                 Browser.External href ->
                     ( model

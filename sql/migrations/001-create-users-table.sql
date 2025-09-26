@@ -3,7 +3,8 @@ create table users (
     username text not null unique,
     email text not null unique,
     fullname text,
-    password text not null,
+    -- No 'not null' constraint on password to allow for OAuth users
+    password text,
     admin boolean not null default false,
     created_at datetime default current_timestamp
 );
