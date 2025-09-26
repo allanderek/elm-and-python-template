@@ -1,5 +1,6 @@
 module Route exposing
     ( Route(..)
+    , googleOAuthPath
     , href
     , parse
     , unparse
@@ -10,6 +11,11 @@ import Html.Attributes
 import Url
 import Url.Builder
 import Url.Parser as Parser exposing ((</>))
+
+
+googleOAuthPath : String
+googleOAuthPath =
+    "/api/auth/google/login"
 
 
 type Route
@@ -32,6 +38,11 @@ parse url =
         routeParser =
             Parser.oneOf
                 [ Parser.top |> Parser.map Home
+                , Parser.s "api"
+                    </> Parser.s "auth"
+                    </> Parser.s "google"
+                    </> Parser.s "callback"
+                    |> Parser.map Home
                 , Parser.s appPrefix </> appParser
                 ]
 

@@ -1,6 +1,10 @@
 { pkgs, lib, config, inputs, ... }:
 
 {
+  dotenv.enable = true;
+  dotenv.disableHint = false;
+
+
   # https://devenv.sh/packages/
   packages = [ 
     pkgs.git 

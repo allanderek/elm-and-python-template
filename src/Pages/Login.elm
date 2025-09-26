@@ -1,5 +1,6 @@
 module Pages.Login exposing
-    ( view
+    ( loginWithGoogle
+    , view
     , viewForm
     )
 
@@ -91,4 +92,15 @@ viewForm model =
         , Html.a [ Route.href Route.Register ]
             [ Html.text "Register here." ]
         ]
+    , loginWithGoogle
     ]
+
+
+loginWithGoogle : Html msg
+loginWithGoogle =
+    Html.p []
+        [ Html.text "Or you can "
+        , Html.a
+            [ Attributes.href Route.googleOAuthPath ]
+            [ Html.text "login with Google" ]
+        ]

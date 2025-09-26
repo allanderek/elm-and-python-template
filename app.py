@@ -22,7 +22,7 @@ import uvicorn
 import app_details
 import logging
 import secrets
-from requests_oauthlib import OAuth2Session
+from authlib.integrations.requests_client import OAuth2Session
 
 # Global variables that will be set by create_app
 app = FastAPI()
@@ -192,16 +192,18 @@ def serve_index(request: Request, path: str = None):
                 "fullname": user['fullname'],
                 "admin": bool(user['admin'])
             }
+        debug_mode = config.get('debug', False)
         user_flags_json = json.dumps(user_flags)
-        main_js_src = "/static/main-debug.js" if config.get('debug', False) else "/static/main.js"
-        main_css_src ="/static/styles.css" if config.get('debug', False) else "/static/styles.min.css"
+        main_js_src = "/static/main-debug.js" if debug_mode else "/static/main.js"
+        main_css_src ="/static/styles.css" if debug_mode else "/static/styles.min.css"
+        main_title = f"DEBUG - {app_details.title}" if debug_mode else app_details.title
 
         index_html = f"""<!DOCTYPE html>
                 <html>
                 <head>
                     <meta charset="UTF-8">
                     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                    <title>{app_details.title}</title>
+                    <title>{main_title}</title>
                     <link rel="icon" type="image/svg" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='48' height='48' viewBox='0 0 16 16'><text x='0' y='14'>{app_details.favicon_emoji}</text></svg>"/>
 
                     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -354,7 +356,7 @@ def logout(response: Response):
 
 
 # OAuth configuration
-GOOGLE_AUTHORIZE_URL = 'https://accounts.google.com/o/oauth2/auth'
+GOOGLE_AUTHORIZE_URL = 'https://accounts.google.com/o/oauth2/v2/auth'
 GOOGLE_TOKEN_URL = 'https://oauth2.googleapis.com/token'
 GOOGLE_USERINFO_URL = 'https://www.googleapis.com/oauth2/v2/userinfo'
 
@@ -376,6 +378,8 @@ def google_oauth_login():
         GOOGLE_AUTHORIZE_URL,
         state=state
     )
+
+    print(f"AND THE AUTH URL IS: {authorization_url}")
 
     # Store state temporarily (use Redis/database in production)
     oauth_states[state] = True
@@ -417,17 +421,15 @@ def google_oauth_callback(request: Request, response: Response, code: Optional[s
         # Process the OAuth login
         oauth_result = process_oauth_login('google', user_info)
 
-        if oauth_result['success']:
-            user_data = oauth_result['user']
-            user_id = user_data['id']
+        if not oauth_result["success"]:
+            return RedirectResponse(url=f"{config['base_url']}#/login?error=oauth_failed", status_code=303)
 
-            # Set authentication cookie
-            set_auth_cookie(response, user_id)
+        user_id = oauth_result["user"]["id"]
 
-            # Redirect to home page
-            return RedirectResponse(url=f"{config['base_url']}#/")
-        else:
-            return RedirectResponse(url=f"{config['base_url']}#/login?error=oauth_failed")
+        redirect = RedirectResponse(url=f"{config['base_url']}#/", status_code=303)
+        set_auth_cookie(redirect, user_id)   # <-- set cookie on the redirect response
+        return redirect
+
     except Exception as e:
         logging.error(f"OAuth error: {repr(e)}")
         raise HTTPException(status_code=500, detail='OAuth authentication failed')
@@ -576,17 +578,20 @@ def configure_app(config_dict):
     if needs_init:
         init_test_database()
     
-
 def init_test_database():
     """Initialize database schema by executing SQL migration files."""
     with db_transaction() as db:
         # Execute the create users table migration
-        migration_file = 'sql/migrations/create-users-table.sql'
-        with open(migration_file, 'r') as f:
-            sql_content = f.read()
-        
-        # Execute all SQL statements in the file
-        db.executescript(sql_content)
+        migration_files = [
+            'sql/migrations/001-create-users-table.sql',
+            'sql/migrations/002-add-oauth-accounts.sql',
+            'sql/migrations/003-user-feedback.sql',
+        ]
+        for migration_file in migration_files:
+            with open(migration_file, 'r') as f:
+                sql_content = f.read()
+            db.executescript(sql_content)
+
 
 if __name__ == '__main__':
 

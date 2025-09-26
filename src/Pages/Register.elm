@@ -7,6 +7,7 @@ import Html.Attributes as Attributes
 import Html.Events as Events
 import Model exposing (Model)
 import Msg exposing (Msg)
+import Pages.Login
 import Route
 import Types.Register
 
@@ -105,5 +106,6 @@ view model =
                     , Html.a [ Route.href Route.Login ]
                         [ Html.text "Login here." ]
                     ]
+                , Pages.Login.loginWithGoogle
                 ]
             }
