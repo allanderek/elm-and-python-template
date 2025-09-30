@@ -26,19 +26,16 @@ from authlib.integrations.requests_client import OAuth2Session
 
 # Global variables that will be set by create_app
 app = FastAPI()
-password_hasher = argon2.PasswordHasher()
 
 # Make sure the static directory exists
 os.makedirs('./static', exist_ok=True)
+# Mount static files
+app.mount("/static", StaticFiles(directory="static"), name="static")
+
 
 AUTH_COOKIE_NAME = "auth_token"
 AUTH_COOKIE_MAX_DAYS = 360
 AUTH_COOKIE_MAX_AGE = AUTH_COOKIE_MAX_DAYS * 24 * 60 * 60  # 360 days in seconds
-
-GOOGLE_CLIENT_ID= os.getenv('GOOGLE_CLIENT_ID')
-GOOGLE_CLIENT_SECRET= os.getenv('GOOGLE_CLIENT_SECRET')
-
-
 
 
 @contextlib.contextmanager
@@ -96,6 +93,8 @@ def require_admin_user(request: Request) -> int:
 
     return user_id
 
+password_hasher = argon2.PasswordHasher()
+
 def verify_password(stored_password, provided_password):
     """Verify password using argon2"""
     try:
@@ -141,8 +140,6 @@ def get_current_user(db, user_id):
     }
 
 
-# Mount static files
-app.mount("/static", StaticFiles(directory="static"), name="static")
 
 # Serve index.html for '/' and any path starting with '/app'
 @app.get("/", response_class=HTMLResponse)
@@ -350,6 +347,9 @@ def logout(response: Response):
 
 
 # OAuth configuration
+GOOGLE_CLIENT_ID= os.getenv('GOOGLE_CLIENT_ID')
+GOOGLE_CLIENT_SECRET= os.getenv('GOOGLE_CLIENT_SECRET')
+
 GOOGLE_AUTHORIZE_URL = 'https://accounts.google.com/o/oauth2/v2/auth'
 GOOGLE_TOKEN_URL = 'https://oauth2.googleapis.com/token'
 GOOGLE_USERINFO_URL = 'https://www.googleapis.com/oauth2/v2/userinfo'
@@ -611,11 +611,6 @@ def submit_feedback(feedback_data: FeedbackRequest, request: Request):
             'feedback_id': feedback_id
         }
 
-
-
-@app.get('/api/protected-resource')
-def protected_resource(user_id: int = Depends(get_current_user_id)):
-    return {'message': f'Hello, authenticated user {user_id}!'}
 
 def configure_app(config_dict):
     """Configure JWT and logging after config is loaded."""
