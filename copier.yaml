@@ -13,3 +13,9 @@ emoji_icon:
   type: str
   help: "An emoji to use as an icon for the application"
   default: "🚀"
+
+
+_tasks:
+  - command: "mv .env.example .env"
+    when: "{{ _copier_operation == 'copy' }}"
+

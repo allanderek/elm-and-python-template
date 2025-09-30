@@ -13,3 +13,7 @@ $ source venv/bin/activate.fish
 
 copier copy gh:allanderek/elm-and-python-template new-project-name
 
+# Fill in the .env file
+
+Otherwise things won't work.
+
