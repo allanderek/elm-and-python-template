@@ -17,6 +17,7 @@ import Types.Login
 import Types.Profile
 import Types.Register
 import Types.User exposing (User)
+import Types.UserFeedback
 import Url
 
 
@@ -60,6 +61,9 @@ initRoute model =
             Return.noEffect model
 
         Route.Profile ->
+            Return.noEffect model
+
+        Route.Feedback ->
             Return.noEffect model
 
         Route.NotFound ->
@@ -358,3 +362,41 @@ update msg model =
                         , Effect.SetLocalStorage "user" (Types.User.encode user)
                         ]
             )
+
+        Msg.UpdateUserFeedbackForm formMessage ->
+            let
+                form : Types.UserFeedback.Form
+                form =
+                    model.userFeedbackForm
+
+                newForm : Types.UserFeedback.Form
+                newForm =
+                    case formMessage of
+                        Msg.UserFeedbackEmailInput input ->
+                            { form | email = input }
+
+                        Msg.UserFeedbackCommentsInput input ->
+                            { form | comments = input }
+            in
+            Return.noEffect { model | userFeedbackForm = newForm }
+
+        Msg.SubmitUserFeedback ->
+            case Types.UserFeedback.isValidForm model.userFeedbackForm of
+                False ->
+                    Return.noEffect model
+
+                True ->
+                    ( { model | userFeedbackStatus = Helpers.Http.Inflight }
+                    , Effect.SubmitUserFeedback model.userFeedbackForm
+                    )
+
+        Msg.SubmitUserFeedbackResponse result ->
+            Return.noEffect
+                { model | userFeedbackStatus = Helpers.Http.fromResult result }
+
+        Msg.ResetUserFeedbackForm ->
+            Return.noEffect
+                { model
+                    | userFeedbackForm = Types.UserFeedback.emptyForm
+                    , userFeedbackStatus = Helpers.Http.Ready
+                }

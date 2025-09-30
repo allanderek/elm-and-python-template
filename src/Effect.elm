@@ -9,6 +9,7 @@ import Types.Data exposing (Data)
 import Types.Login
 import Types.Profile
 import Types.Register
+import Types.UserFeedback
 
 
 type Effect
@@ -27,6 +28,7 @@ type Effect
     | SubmitLogout
     | SubmitProfile Types.Profile.Form
     | GetData Data
+    | SubmitUserFeedback Types.UserFeedback.Form
 
 
 goto : Route -> Effect

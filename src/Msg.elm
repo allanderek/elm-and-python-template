@@ -3,6 +3,7 @@ module Msg exposing
     , Msg(..)
     , UpdateLoginFormMsg(..)
     , UpdateRegisterFormMsg(..)
+    , UpdateUserFeedbackFormMsg(..)
     )
 
 import Browser
@@ -32,6 +33,11 @@ type UpdateRegisterFormMsg
     | RegisterFullNameInput String
 
 
+type UpdateUserFeedbackFormMsg
+    = UserFeedbackEmailInput String
+    | UserFeedbackCommentsInput String
+
+
 type Msg
     = LinkClicked Browser.UrlRequest
     | UrlChanged Url.Url
@@ -52,3 +58,7 @@ type Msg
     | RegisterSubmit
     | RegisterSubmitResponse (HttpResult User)
     | UpdateRegisterForm UpdateRegisterFormMsg
+    | UpdateUserFeedbackForm UpdateUserFeedbackFormMsg
+    | SubmitUserFeedback
+    | SubmitUserFeedbackResponse (HttpResult ())
+    | ResetUserFeedbackForm

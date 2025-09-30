@@ -7,6 +7,7 @@ import Helpers.Http
 import Html exposing (Html)
 import Model exposing (Model)
 import Msg exposing (Msg)
+import Pages.Feedback
 import Pages.Login
 import Pages.Profile
 import Pages.Register
@@ -35,6 +36,11 @@ application model =
                                     Html.a [ Route.href Route.Login ]
                                         [ Html.text "Login/Register" ]
                             ]
+                        , Html.li []
+                            [ Html.a
+                                [ Route.href Route.Feedback ]
+                                [ Html.text "Feedback" ]
+                            ]
                         ]
                     ]
                 ]
@@ -55,6 +61,9 @@ application model =
 
                 Route.Profile ->
                     Pages.Profile.view model
+
+                Route.Feedback ->
+                    Pages.Feedback.view model
 
                 Route.NotFound ->
                     { title = "Not found"

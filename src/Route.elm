@@ -23,6 +23,7 @@ type Route
     | Login
     | Register
     | Profile
+    | Feedback
     | NotFound
 
 
@@ -53,6 +54,7 @@ parse url =
                 , Parser.s "login" |> Parser.map Login
                 , Parser.s "register" |> Parser.map Register
                 , Parser.s "profile" |> Parser.map Profile
+                , Parser.s "feedback" |> Parser.map Feedback
                 , Parser.s "not-found" |> Parser.map NotFound
                 ]
     in
@@ -83,6 +85,9 @@ unparse route =
 
                 Profile ->
                     [ "profile" ]
+
+                Feedback ->
+                    [ "feedback" ]
 
                 NotFound ->
                     [ "not-found" ]

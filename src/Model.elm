@@ -12,6 +12,7 @@ import Types.Login
 import Types.Profile
 import Types.Register
 import Types.User exposing (User)
+import Types.UserFeedback
 import Url exposing (Url)
 
 
@@ -26,6 +27,8 @@ type alias Model key =
     , editingProfile : Bool
     , profileForm : Maybe Types.Profile.Form
     , profileStatus : Helpers.Http.Status User
+    , userFeedbackForm : Types.UserFeedback.Form
+    , userFeedbackStatus : Helpers.Http.Status ()
     }
 
 
@@ -41,6 +44,8 @@ initial key url now userStatus =
     , editingProfile = False
     , profileForm = Nothing
     , profileStatus = Helpers.Http.Ready
+    , userFeedbackForm = Types.UserFeedback.emptyForm
+    , userFeedbackStatus = Helpers.Http.Ready
     }
 
 

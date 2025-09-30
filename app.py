@@ -38,34 +38,6 @@ AUTH_COOKIE_MAX_AGE = AUTH_COOKIE_MAX_DAYS * 24 * 60 * 60  # 360 days in seconds
 GOOGLE_CLIENT_ID= os.getenv('GOOGLE_CLIENT_ID')
 GOOGLE_CLIENT_SECRET= os.getenv('GOOGLE_CLIENT_SECRET')
 
-# Pydantic models for request/response bodies
-class LoginRequest(BaseModel):
-    username: str
-    password: str
-
-class RegisterRequest(BaseModel):
-    username: str
-    password: str
-    email: str
-    fullname: Optional[str] = None
-
-class ProfileUpdateRequest(BaseModel):
-    fullname: str
-
-class UserResponse(BaseModel):
-    id: int
-    username: str
-    fullname: Optional[str]
-    email: str
-    admin: bool
-
-class AuthResponse(BaseModel):
-    success: bool
-    message: str
-    user: Optional[UserResponse] = None
-
-class ErrorResponse(BaseModel):
-    error: str
 
 
 
@@ -274,8 +246,24 @@ def serve_index(request: Request, path: str = None):
         return index_html
 
 # Authentication routes
+class UserResponse(BaseModel):
+    id: int
+    username: str
+    fullname: Optional[str]
+    email: str
+    admin: bool
+
+class AuthResponse(BaseModel):
+    success: bool
+    message: str
+    user: Optional[UserResponse] = None
+
+class LoginRequest(BaseModel):
+    username: str
+    password: str
+
 @app.post('/api/login')
-def login(login_data: LoginRequest, response: Response):
+def login(login_data: LoginRequest, response: Response) -> AuthResponse:
     with db_transaction() as db:
         username = login_data.username
         password = login_data.password
@@ -293,20 +281,26 @@ def login(login_data: LoginRequest, response: Response):
         # Set authentication cookie
         set_auth_cookie(response, user['id'])
 
-        return {
-            'success': True,
-            'message': 'Login successful',
-            'user': {
-                'id': user['id'],
-                'username': user['username'],
-                'fullname': user['fullname'],
-                'email': user['email'],
-                'admin': bool(user['admin'])
-            }
-        }
+        return AuthResponse(
+            success=True,
+            message='Login successful',
+            user=UserResponse(
+                id=user['id'],
+                username=user['username'],
+                fullname=user['fullname'],
+                email=user['email'],
+                admin=bool(user['admin'])
+            )
+        )
+
+class RegisterRequest(BaseModel):
+    username: str
+    password: str
+    email: str
+    fullname: Optional[str] = None
 
 @app.post('/api/register')
-def register(register_data: RegisterRequest, response: Response):
+def register(register_data: RegisterRequest, response: Response) -> AuthResponse:
     with db_transaction() as db:
         username = register_data.username
         password = register_data.password
@@ -337,17 +331,17 @@ def register(register_data: RegisterRequest, response: Response):
         # Set authentication cookie
         set_auth_cookie(response, user_id)
 
-        return {
-            'success': True,
-            'message': 'Registration successful',
-            'user': {
-                'id': user_id,
-                'username': username,
-                'fullname': fullname,
-                'email': email,
-                'admin': False
-            }
-        }
+        return AuthResponse(
+            success=True,
+            message='Registration successful',
+            user=UserResponse(
+                id=user_id,
+                username=username,
+                fullname=fullname,
+                email=email,
+                admin=False
+            )
+        )
 
 @app.post('/api/logout')
 def logout(response: Response):
@@ -534,6 +528,9 @@ def get_me(user_id: int = Depends(get_current_user_id)):
     with db_transaction() as db:
         return get_current_user(db, user_id)
 
+class ProfileUpdateRequest(BaseModel):
+    fullname: str
+
 @app.post('/api/profile')
 def update_profile(profile_data: ProfileUpdateRequest, user_id: int = Depends(get_current_user_id)):
     with db_transaction() as db:
@@ -548,6 +545,73 @@ def update_profile(profile_data: ProfileUpdateRequest, user_id: int = Depends(ge
 
         # Return updated user data
         return get_current_user(db, user_id)
+
+
+class FeedbackRequest(BaseModel):
+    comments: str
+    email: Optional[str] = None
+
+@app.post('/api/feedback')
+def submit_feedback(feedback_data: FeedbackRequest, request: Request):
+    """Submit user feedback.
+
+    Accepts feedback from both authenticated and anonymous users.
+    """
+    with db_transaction() as db:
+        comments = feedback_data.comments.strip()
+        if not comments:
+            raise HTTPException(status_code=400, detail="Comments are required and must be a non-empty string")
+
+        if len(comments) > 5000:  # Reasonable length limit
+            raise HTTPException(status_code=400, detail="Comments must be 5000 characters or less")
+
+        # Optional email validation
+        email = None
+        if feedback_data.email:
+            email = feedback_data.email.strip()
+            if len(email) > 255:  # Standard email field length
+                raise HTTPException(status_code=400, detail="Email must be 255 characters or less")
+            if not email:  # Empty string becomes None
+                email = None
+
+        # Get user ID if authenticated (optional)
+        user_id = get_user_id_from_cookie(request)
+
+        # Get user agent and IP address from request
+        user_agent = request.headers.get('user-agent', '')
+        # Get real IP address, accounting for proxies
+        ip_address = (request.headers.get('x-forwarded-for') or
+                     request.headers.get('x-real-ip') or
+                     request.client.host)
+
+        # If X-Forwarded-For contains multiple IPs, take the first one
+        if ip_address and ',' in ip_address:
+            ip_address = ip_address.split(',')[0].strip()
+
+        # Insert feedback into database
+        insert_query = """
+            insert into user_feedback (user_id, email, comments, user_agent, ip_address, status)
+            values (:user_id, :email, :comments, :user_agent, :ip_address, :status)
+        """
+
+        cursor = db.execute(insert_query, {
+            "user_id": user_id,
+            "email": email,
+            "comments": comments,
+            "user_agent": user_agent,
+            "ip_address": ip_address,
+            "status": "new"
+        })
+
+        feedback_id = cursor.lastrowid
+
+        return {
+            'success': True,
+            'message': 'Feedback submitted successfully',
+            'feedback_id': feedback_id
+        }
+
+
 
 @app.get('/api/protected-resource')
 def protected_resource(user_id: int = Depends(get_current_user_id)):

@@ -14,6 +14,7 @@ import Types.Login
 import Types.Profile
 import Types.Register
 import Types.User exposing (User)
+import Types.UserFeedback
 
 
 apiPrefix : String
@@ -132,3 +133,25 @@ perform model effect =
             case data of
                 Types.Data.None ->
                     Cmd.none
+
+        Effect.SubmitUserFeedback form ->
+            let
+                url : String
+                url =
+                    apiUrl [ "feedback" ]
+
+                body : Http.Body
+                body =
+                    form
+                        |> Types.UserFeedback.encodeForm
+                        |> Http.jsonBody
+
+                decoder : Decoder ()
+                decoder =
+                    Decode.succeed ()
+            in
+            Http.post
+                { url = url
+                , body = body
+                , expect = Http.expectJson Msg.SubmitUserFeedbackResponse decoder
+                }

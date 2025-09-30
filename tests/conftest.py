@@ -21,9 +21,11 @@ def test_config():
     os.close(db_fd)  # Close the file descriptor, SQLite will open it
     
     config = {
+        "base_url": "https://dev.poleprediction.com",
         "prettyLogging": False,
         "logLevel": 1,
-        "jwtSecret": "test-secret-key-for-testing-only",
+        "jwtSecretVar": "DEV_JWT_SECRET",
+        "jwtAlgorithm": "HS256",
         "dbFilepath": db_path,
         "port": 3005,  # Different port for testing
         "debug": True
