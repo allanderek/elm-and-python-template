@@ -27,6 +27,7 @@ SIMULATE_MODULE = $(GEN_TESTS_MODULES_DIR)/Simulate.elm
 PORTS_MODULE = $(GEN_TESTS_MODULES_DIR)/Ports.elm
 
 $(SIMULATE_MODULE) $(PORTS_MODULE): src/Perform.elm src/Ports.elm perform-to-simulate.toml
+	mkdir -p $(GEN_TESTS_MODULES_DIR)
 	cp src/Perform.elm $(SIMULATE_MODULE)
 	cp src/Ports.elm $(PORTS_MODULE)
 	comby -config perform-to-simulate.toml -d $(GEN_TESTS_MODULES_DIR) -in-place -matcher .elm
