@@ -18,6 +18,7 @@ import Url exposing (Url)
 
 type alias Model key =
     { navigationKey : key
+    , debugMode : Bool
     , route : Route
     , now : Time.Posix
     , zone : Time.Zone
@@ -32,9 +33,10 @@ type alias Model key =
     }
 
 
-initial : key -> Url -> Time.Posix -> Helpers.Http.Status User -> Model key
-initial key url now userStatus =
+initial : key -> Bool -> Url -> Time.Posix -> Helpers.Http.Status User -> Model key
+initial key debugMode url now userStatus =
     { navigationKey = key
+    , debugMode = debugMode
     , route = Route.parse url
     , now = now
     , zone = Time.utc

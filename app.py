@@ -210,7 +210,9 @@ def serve_index(request: Request, path: str = None):
                         }};
 
                         const user_flags = {user_flags_json};
-                        const flags = {{ "flags" : {{ "now": Date.now(), "user": user_flags }} }};
+                        const flags = {{ "flags" : 
+                            {{ "now": Date.now(), "user": user_flags, debug_mode: {str(debug_mode).lower()} }}
+                        }};
                         var app = Elm.Main.init(flags);
 
 

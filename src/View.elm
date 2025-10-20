@@ -70,6 +70,12 @@ application model =
                     , body = [ Html.text "The page you were looking for has not been found." ]
                     }
     in
-    { title = AppDetails.title
+    { title =
+        case model.debugMode of
+            False ->
+                AppDetails.title
+
+            True ->
+                String.append "DEBUG - " AppDetails.title
     , body = [ navigationBar, Components.Page.view body ]
     }

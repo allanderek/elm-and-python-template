@@ -94,6 +94,11 @@ init programFlags url key =
         decodeFlag fieldName fieldDecoder =
             Decode.decodeValue (Decode.field fieldName fieldDecoder) programFlags
 
+        debugMode : Bool
+        debugMode =
+            decodeFlag "debug_mode" Decode.bool
+                |> Result.withDefault False
+
         userStatus : Helpers.Http.Status User
         userStatus =
             case decodeFlag "user" Types.User.decoder of
@@ -115,7 +120,7 @@ init programFlags url key =
 
         initialModel : Model key
         initialModel =
-            Model.initial key url now userStatus
+            Model.initial key debugMode url now userStatus
     in
     Update.initRoute initialModel
         |> Return.addEffect Effect.GetTimeZone
