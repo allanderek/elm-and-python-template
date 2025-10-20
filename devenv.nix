@@ -29,4 +29,13 @@
   languages.elm.enable = true;
   languages.python.enable = true;
 
+  enterShell = ''
+    if [ ! -d "venv" ]; then
+      echo "Creating Python virtual environment..."
+      python -m venv venv
+      echo "Installing dependencies..."
+      ./venv/bin/pip install -r requirements.txt
+    fi
+    source venv/bin/activate
+  '';
 }
