@@ -27,15 +27,15 @@
 
   # https://devenv.sh/languages/
   languages.elm.enable = true;
-  languages.python.enable = true;
+  languages.python = {
+    enable = true;
+    venv.enable = true;
+    venv.requirements = ./requirements.txt;
+  };
 
   enterShell = ''
-    if [ ! -d "venv" ]; then
-      echo "Creating Python virtual environment..."
-      python -m venv venv
-      echo "Installing dependencies..."
-      ./venv/bin/pip install -r requirements.txt
-    fi
-    source venv/bin/activate
+    python --version
+    which python
+    which pip
   '';
 }
