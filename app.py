@@ -97,6 +97,12 @@ password_hasher = argon2.PasswordHasher()
 
 def verify_password(stored_password, provided_password):
     """Verify password using argon2"""
+    # Defensive checks: reject if either password is None or blank
+    if not stored_password or not stored_password.strip():
+        return False
+    if not provided_password or not provided_password.strip():
+        return False
+
     try:
         password_hasher.verify(stored_password, provided_password)
         return True
@@ -274,7 +280,12 @@ def login(login_data: LoginRequest, response: Response) -> AuthResponse:
         query = "SELECT id, username, email, fullname, password, admin FROM users WHERE username = ?"
         user = db.execute(query, (username,)).fetchone()
 
-        if not user or not verify_password(user['password'], password):
+        # Check if user exists and has a password set (OAuth users may not have a password)
+        if not user or not user["password"]:
+            raise HTTPException(status_code=401, detail="Invalid credentials")
+
+        # Verify password
+        if not verify_password(user["password"], password):
             raise HTTPException(status_code=401, detail="Invalid credentials")
 
         # Set authentication cookie
@@ -547,6 +558,67 @@ def update_profile(profile_data: ProfileUpdateRequest, user_id: int = Depends(ge
 
         # Return updated user data
         return get_current_user(db, user_id)
+
+
+class ChangePasswordRequest(BaseModel):
+    current_password: str
+    new_password: str
+    confirm_password: str
+
+
+@app.post("/api/change-password")
+def change_password(
+    password_data: ChangePasswordRequest, user_id: int = Depends(get_current_user_id)
+):
+    with db_transaction() as db:
+        current_password = password_data.current_password
+        new_password = password_data.new_password
+        confirm_password = password_data.confirm_password
+
+        # Validate new password is not blank
+        if not new_password or not new_password.strip():
+            raise HTTPException(status_code=400, detail="New password is required")
+
+        # Validate confirmation password is not blank
+        if not confirm_password or not confirm_password.strip():
+            raise HTTPException(status_code=400, detail="Password confirmation is required")
+
+        # Verify new password and confirmation match
+        if new_password != confirm_password:
+            raise HTTPException(
+                status_code=400, detail="New password and confirmation do not match"
+            )
+
+        # Get current password hash from database
+        query = "SELECT password FROM users WHERE id = ?"
+        user = db.execute(query, (user_id,)).fetchone()
+
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+
+        # Verify current password if user has one (OAuth users might not have a password)
+        if user["password"]:
+            # If user has a password, current_password must be provided and correct
+            if not current_password:
+                raise HTTPException(status_code=401, detail="Current password is required")
+
+            if not verify_password(user["password"], current_password):
+                raise HTTPException(status_code=401, detail="Current password is incorrect")
+
+            # Verify new password is different from current
+            if current_password == new_password:
+                raise HTTPException(
+                    status_code=400, detail="New password must be different from current password"
+                )
+
+        # Hash new password
+        new_password_hash = password_hasher.hash(new_password)
+
+        # Update password in database
+        update_query = "UPDATE users SET password = ? WHERE id = ?"
+        db.execute(update_query, (new_password_hash, user_id))
+
+        return {"success": True, "message": "Password updated successfully"}
 
 
 class FeedbackRequest(BaseModel):

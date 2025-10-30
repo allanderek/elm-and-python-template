@@ -9,6 +9,7 @@ import Ports
 import Task
 import Time
 import TimeZone
+import Types.ChangePassword
 import Types.Data
 import Types.Login
 import Types.Profile
@@ -127,6 +128,21 @@ perform model effect =
                         |> Types.Profile.encodeForm
                         |> Http.jsonBody
                 , expect = Http.expectJson Msg.SubmitEditedProfileResponse decoder
+                }
+
+        Effect.SubmitChangePassword form ->
+            let
+                decoder : Decoder ()
+                decoder =
+                    Decode.succeed ()
+            in
+            Http.post
+                { url = apiUrl [ "change-password" ]
+                , body =
+                    form
+                        |> Types.ChangePassword.encodeForm
+                        |> Http.jsonBody
+                , expect = Http.expectJson Msg.SubmitChangePasswordResponse decoder
                 }
 
         Effect.GetData data ->

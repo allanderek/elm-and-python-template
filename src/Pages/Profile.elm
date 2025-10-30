@@ -9,6 +9,7 @@ import Html.Events
 import Model exposing (Model)
 import Msg exposing (Msg)
 import Pages.Login
+import Types.ChangePassword
 import Types.Profile
 import Types.User exposing (User)
 
@@ -63,6 +64,89 @@ view model =
                     [ Html.text "Submit" ]
                 ]
 
+        viewChangePasswordForm : Html Msg
+        viewChangePasswordForm =
+            let
+                disabled : Bool
+                disabled =
+                    Helpers.Http.isInflight model.changePasswordStatus
+
+                form : Types.ChangePassword.Form
+                form =
+                    model.changePasswordForm
+            in
+            Html.form
+                [ Html.Events.onSubmit Msg.SubmitChangePassword
+                , Attributes.disabled disabled
+                ]
+                [ Html.div
+                    []
+                    [ Html.label
+                        [ Attributes.class "form-label" ]
+                        [ Html.text "Current Password (if you have one)"
+                        , Html.input
+                            [ Attributes.type_ "password"
+                            , Attributes.value form.currentPassword
+                            , Attributes.name "current_password"
+                            , Helpers.Events.onInputOrDisabled disabled
+                                (Msg.CurrentPasswordInput >> Msg.UpdateChangePasswordForm)
+                            , Attributes.placeholder "Current Password (if you have one)"
+                            , Attributes.disabled disabled
+                            , Attributes.required False
+                            ]
+                            []
+                        ]
+                    ]
+                , Html.div
+                    []
+                    [ Html.label
+                        [ Attributes.class "form-label" ]
+                        [ Html.text "New Password"
+                        , Html.input
+                            [ Attributes.type_ "password"
+                            , Attributes.value form.newPassword
+                            , Attributes.name "new_password"
+                            , Helpers.Events.onInputOrDisabled disabled
+                                (Msg.NewPasswordInput >> Msg.UpdateChangePasswordForm)
+                            , Attributes.placeholder "New Password"
+                            , Attributes.disabled disabled
+                            , Attributes.required True
+                            ]
+                            []
+                        ]
+                    ]
+                , Html.div
+                    []
+                    [ Html.label
+                        [ Attributes.class "form-label" ]
+                        [ Html.text "Confirm New Password (optional)"
+                        , Html.input
+                            [ Attributes.type_ "password"
+                            , Attributes.value form.confirmPassword
+                            , Attributes.name "confirm_password"
+                            , Helpers.Events.onInputOrDisabled disabled
+                                (Msg.ConfirmPasswordInput >> Msg.UpdateChangePasswordForm)
+                            , Attributes.placeholder "Confirm New Password (optional)"
+                            , Attributes.disabled disabled
+                            , Attributes.required False
+                            ]
+                            []
+                        ]
+                    ]
+                , Html.button
+                    [ Attributes.type_ "button"
+                    , Helpers.Events.onClickOrDisabled disabled Msg.CancelEditPassword
+                    ]
+                    [ Html.text "Cancel" ]
+                , Html.button
+                    [ Attributes.type_ "submit"
+                    , Attributes.name "submit"
+                    , Attributes.value "submit"
+                    , Attributes.disabled (disabled || not (Types.ChangePassword.isValidForm form))
+                    ]
+                    [ Html.text "Change Password" ]
+                ]
+
         body : List (Html Msg)
         body =
             case Helpers.Http.toMaybe model.userStatus of
@@ -92,6 +176,23 @@ view model =
 
                                 True ->
                                     [ viewFullnameForm user ]
+                            )
+                        , Html.dt
+                            []
+                            [ Html.text "Password" ]
+                        , Html.dd
+                            []
+                            (case model.editingPassword of
+                                False ->
+                                    [ Html.button
+                                        [ Attributes.class "change-password-button"
+                                        , Html.Events.onClick Msg.EditPassword
+                                        ]
+                                        [ Html.text "Change Password" ]
+                                    ]
+
+                                True ->
+                                    [ viewChangePasswordForm ]
                             )
                         , Html.dt
                             []

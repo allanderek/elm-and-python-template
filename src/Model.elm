@@ -8,6 +8,7 @@ import Dict exposing (Dict)
 import Helpers.Http
 import Route exposing (Route)
 import Time
+import Types.ChangePassword
 import Types.Login
 import Types.Profile
 import Types.Register
@@ -28,6 +29,9 @@ type alias Model key =
     , editingProfile : Bool
     , profileForm : Maybe Types.Profile.Form
     , profileStatus : Helpers.Http.Status User
+    , editingPassword : Bool
+    , changePasswordForm : Types.ChangePassword.Form
+    , changePasswordStatus : Helpers.Http.Status ()
     , userFeedbackForm : Types.UserFeedback.Form
     , userFeedbackStatus : Helpers.Http.Status ()
     }
@@ -46,6 +50,9 @@ initial key debugMode url now userStatus =
     , editingProfile = False
     , profileForm = Nothing
     , profileStatus = Helpers.Http.Ready
+    , editingPassword = False
+    , changePasswordForm = Types.ChangePassword.emptyForm
+    , changePasswordStatus = Helpers.Http.Ready
     , userFeedbackForm = Types.UserFeedback.emptyForm
     , userFeedbackStatus = Helpers.Http.Ready
     }

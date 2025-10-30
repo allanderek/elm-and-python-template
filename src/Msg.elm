@@ -1,6 +1,7 @@
 module Msg exposing
     ( HttpResult
     , Msg(..)
+    , UpdateChangePasswordFormMsg(..)
     , UpdateLoginFormMsg(..)
     , UpdateRegisterFormMsg(..)
     , UpdateUserFeedbackFormMsg(..)
@@ -33,6 +34,12 @@ type UpdateRegisterFormMsg
     | RegisterFullNameInput String
 
 
+type UpdateChangePasswordFormMsg
+    = CurrentPasswordInput String
+    | NewPasswordInput String
+    | ConfirmPasswordInput String
+
+
 type UpdateUserFeedbackFormMsg
     = UserFeedbackEmailInput String
     | UserFeedbackCommentsInput String
@@ -55,6 +62,11 @@ type Msg
     | EditProfileFullNameInput String
     | SubmitEditedProfile Types.Profile.Form
     | SubmitEditedProfileResponse (HttpResult User)
+    | EditPassword
+    | CancelEditPassword
+    | UpdateChangePasswordForm UpdateChangePasswordFormMsg
+    | SubmitChangePassword
+    | SubmitChangePasswordResponse (HttpResult ())
     | RegisterSubmit
     | RegisterSubmitResponse (HttpResult User)
     | UpdateRegisterForm UpdateRegisterFormMsg

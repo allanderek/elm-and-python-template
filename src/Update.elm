@@ -9,8 +9,10 @@ import Helpers.Http
 import Helpers.List
 import Model exposing (Model)
 import Msg exposing (Msg)
+import Result.Extra
 import Return
 import Route exposing (Route)
+import Types.ChangePassword
 import Types.Data exposing (Data)
 import Types.LocalStorageNotification
 import Types.Login
@@ -250,6 +252,16 @@ update msg model =
         Msg.CancelEditProfile ->
             Return.noEffect { model | editingProfile = False }
 
+        Msg.EditPassword ->
+            Return.noEffect { model | editingPassword = True }
+
+        Msg.CancelEditPassword ->
+            Return.noEffect
+                { model
+                    | editingPassword = False
+                    , changePasswordForm = Types.ChangePassword.emptyForm
+                }
+
         Msg.EditProfileFullNameInput input ->
             case Helpers.Http.toMaybe model.userStatus of
                 Nothing ->
@@ -315,6 +327,67 @@ update msg model =
 
                 Err _ ->
                     Effect.None
+            )
+
+        Msg.UpdateChangePasswordForm formMessage ->
+            let
+                form : Types.ChangePassword.Form
+                form =
+                    model.changePasswordForm
+
+                newForm : Types.ChangePassword.Form
+                newForm =
+                    case formMessage of
+                        Msg.CurrentPasswordInput input ->
+                            { form | currentPassword = input }
+
+                        Msg.NewPasswordInput input ->
+                            { form | newPassword = input }
+
+                        Msg.ConfirmPasswordInput input ->
+                            { form | confirmPassword = input }
+            in
+            Return.noEffect { model | changePasswordForm = newForm }
+
+        Msg.SubmitChangePassword ->
+            case Types.ChangePassword.isValidForm model.changePasswordForm of
+                False ->
+                    Return.noEffect model
+
+                True ->
+                    ( { model | changePasswordStatus = Helpers.Http.Inflight }
+                    , Effect.SubmitChangePassword model.changePasswordForm
+                    )
+
+        Msg.SubmitChangePasswordResponse result ->
+            let
+                alertText : String
+                alertText =
+                    case Result.Extra.isOk result of
+                        True ->
+                            "Password changed successfully"
+
+                        False ->
+                            "Failed to change password. Please check your current password and try again."
+            in
+            ( { model
+                | changePasswordStatus = Helpers.Http.fromResult result
+                , changePasswordForm =
+                    case result of
+                        Ok _ ->
+                            Types.ChangePassword.emptyForm
+
+                        Err _ ->
+                            model.changePasswordForm
+                , editingPassword =
+                    case result of
+                        Ok _ ->
+                            False
+
+                        Err _ ->
+                            True
+              }
+            , Effect.NativeAlert alertText
             )
 
         Msg.UpdateRegisterForm updateMsg ->

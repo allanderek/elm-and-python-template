@@ -5,6 +5,7 @@ module Effect exposing
 
 import Json.Encode
 import Route exposing (Route)
+import Types.ChangePassword
 import Types.Data exposing (Data)
 import Types.Login
 import Types.Profile
@@ -27,6 +28,7 @@ type Effect
     | SubmitLogin Types.Login.Form
     | SubmitLogout
     | SubmitProfile Types.Profile.Form
+    | SubmitChangePassword Types.ChangePassword.Form
     | GetData Data
     | SubmitUserFeedback Types.UserFeedback.Form
 
